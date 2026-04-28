@@ -8,8 +8,8 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3001;
 const JWT_SECRET = process.env.JWT_SECRET || 'learnr_dev_secret';
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '';
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://codedwebchallenge.vercel.app';
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY || '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';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://codedweb.vercel.app';
 
 // ── Middleware ──
 app.use(cors({
@@ -17,7 +17,7 @@ app.use(cors({
     'http://localhost:3000',
     'http://localhost:5173',
     'http://127.0.0.1:5500',
-    'https://codedwebchallenge.vercel.app',
+    'https://codedweb.vercel.app',
     FRONTEND_URL
   ],
   credentials: true
