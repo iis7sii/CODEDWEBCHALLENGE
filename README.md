@@ -10,11 +10,10 @@ A full-stack web app to track courses, goals, streaks, and weekly study activity
 
 | | URL |
 |--|--|
-| **Frontend (Vercel)** | [https://codedwebchallenge.vercel.app](https://codedwebchallenge.vercel.app) |
-| **Backend (Railway)** | `https://your-backend.up.railway.app` |
+| **Frontend (Vercel)** | [https://codedweb.vercel.app] |
+| **Backend (Railway)** | [https://codedwebb.up.railway.app] |
 
-> Replace with your actual URLs after deployment.
-
+some errors with the backend
 ---
 
 ## ✨ Features
@@ -44,109 +43,6 @@ learnr/
 ├── .gitignore
 └── README.md
 ```
-
----
-
-## 🚀 Local Development
-
-### 1. Clone
-```bash
-git clone https://github.com/YOUR_USERNAME/learnr-dashboard.git
-cd learnr-dashboard
-```
-
-### 2. Backend
-```bash
-cd backend
-npm install
-cp .env.example .env      # then edit .env with your values
-npm start
-# → http://localhost:3001
-```
-
-### 3. Frontend
-```bash
-# No build needed — just open in browser:
-open frontend/index.html
-
-# Or use live-server:
-npx live-server frontend
-# → http://localhost:5500
-```
-
-### 4. Demo account
-```
-Email:    demo@learnr.app
-Password: demo123
-```
-
----
-
-## ☁️ Deployment
-
-### Step 1 — Push to GitHub
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/learnr-dashboard.git
-git push -u origin main
-```
-
----
-
-### Step 2 — Deploy Backend to Railway
-
-1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
-2. Select your repo → set **Root Directory** to `backend`
-3. Railway auto-detects Node.js and runs `npm start`
-4. Go to **Variables** tab and add:
-
-| Variable | Value |
-|----------|-------|
-| `JWT_SECRET` | A long random string (see below) |
-| `OPENROUTER_API_KEY` | Your key from openrouter.ai/keys |
-| `FRONTEND_URL` | Your Vercel URL (add after Step 3) |
-
-Generate a JWT secret:
-```bash
-node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
-```
-
-5. Go to **Settings → Networking** → click **Generate Domain**
-6. Copy your Railway URL → looks like [https://codedwebchallenge-production.up.railway.app](https://codedwebchallenge-production.up.railway.app)
-
----
-
-### Step 3 — Deploy Frontend to Vercel
-
-1. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your GitHub repo
-2. Set **Root Directory** to `frontend`
-3. Framework preset: **Other**
-4. Click **Deploy**
-5. Copy your Vercel URL → looks like [https://codedwebchallenge.vercel.app](https://codedwebchallenge.vercel.app)
-
-**Update the Railway URL in your frontend:**
-
-Open `frontend/index.html`, find line:
-```js
-const RAILWAY_URL = 'https://codedwebchallenge-production.up.railway.app';
-```
-Replace with your actual Railway URL, commit and push — Vercel auto-redeploys.
-
-**Update FRONTEND_URL in Railway:**
-Go back to Railway → Variables → set `FRONTEND_URL` to your Vercel URL.
-
----
-
-### Step 4 — Get your OpenRouter API Key
-
-1. Go to [openrouter.ai](https://openrouter.ai) → Sign up (free)
-2. Go to [openrouter.ai/keys](https://openrouter.ai/keys) → **Create Key**
-3. Copy the key → paste into Railway as `OPENROUTER_API_KEY`
-
-The app uses **`meta-llama/llama-3.1-8b-instruct:free`** — completely free, no credits needed.
 
 ---
 
@@ -209,19 +105,7 @@ GET  /api/ai/history
 
 ---
 
-## 🎥 Demo Walkthrough
 
-Record using [Loom](https://loom.com) (free, shareable link):
-
-1. Show the **login screen** → log in with demo account
-2. Walk through the **Dashboard** — streak, metrics, chart
-3. Go to **Courses** → add a new course
-4. Go to **Goals** → add a new goal
-5. Open **AI Tutor** → ask "What should I focus on this week?"
-6. Show **Stats** page
-7. Sign out and sign back in (session persistence)
-
----
 
 ## 🤖 AI Usage
 
