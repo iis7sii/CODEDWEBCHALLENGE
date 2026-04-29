@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Learning Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0b;
+      --surface: #161614;
+      --surface2: #1e1e1b;
+      --surface3: #252522;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.13);
+      --text: #f0ede6;
+      --text2: #9e9b92;
+      --text3: #5e5c56;
+      --accent: #d4f261;
+      --accent2: #a8e63d;
+      --blue: #5b9cf6;
+      --teal: #34d39a;
+      --amber: #f5a623;
+      --coral: #f06b4f;
+      --purple: #a78bfa;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 999;
+      opacity: 0.4;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 220px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 0;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+    }
+
+    .logo {
+      padding: 0 22px 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .logo-mark {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 22px;
+      color: var(--accent);
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+    .logo-sub {
+      font-size: 10px;
+      color: var(--text3);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 3px;
+    }
+
+    .nav { flex: 1; padding: 0 12px; display: flex; flex-direction: column; gap: 2px; }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text2);
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+    }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--surface3); color: var(--text); }
+    .nav-item.active .nav-dot { background: var(--accent); }
+    .nav-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text3);
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .nav-icon { font-size: 15px; width: 18px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 16px 22px 0;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+    .avatar-row { display: flex; align-items: center; gap: 10px; }
+    .avatar {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--teal));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #0d0d0b;
+      flex-shrink: 0;
+    }
+    .avatar-name { font-size: 13px; font-weight: 600; color: var(--text); }
+    .avatar-role { font-size: 11px; color: var(--text3); }
+
+    /* ── Main ── */
+    .main {
+      flex: 1;
+      padding: 36px 40px;
+      max-width: 900px;
+      overflow-y: auto;
+    }
+
+    /* ── Views ── */
+    .view { display: none; animation: fadeIn 0.25s ease; }
+    .view.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 32px; }
+    .page-title {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 36px;
+      color: var(--text);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+    .page-sub { font-size: 13px; color: var(--text2); margin-top: 6px; }
+
+    /* ── Streak banner ── */
+    .streak-banner {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: linear-gradient(135deg, rgba(212,242,97,0.08), rgba(52,211,154,0.06));
+      border: 1px solid rgba(212,242,97,0.18);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      margin-bottom: 24px;
+    }
+    .streak-icon { font-size: 24px; }
+    .streak-num { font-size: 16px; font-weight: 700; color: var(--accent); }
+    .streak-label { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+    /* ── Metrics ── */
+    .metrics { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 32px; }
+    .metric {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      transition: border-color 0.15s;
+    }
+    .metric:hover { border-color: var(--border2); }
+    .metric-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .metric-value { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1; }
+    .metric-sub { font-size: 11px; color: var(--text3); margin-top: 6px; }
+    .metric-bar { height: 2px; background: var(--surface3); border-radius: 99px; margin-top: 10px; overflow: hidden; }
+    .metric-bar-fill { height: 100%; border-radius: 99px; background: var(--accent); }
+
+    /* ── Section header ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .section-title { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; }
+    .section-action {
+      font-size: 12px;
+      color: var(--accent);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      transition: background 0.15s;
+    }
+    .section-action:hover { background: rgba(212,242,97,0.08); }
+
+    /* ── Courses ── */
+    .courses { display: flex; flex-direction: column; gap: 8px; margin-bottom: 32px; }
+    .course-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .course-card:hover { border-color: var(--border2); background: var(--surface2); }
+    .course-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+    .course-emoji { font-size: 20px; margin-right: 10px; flex-shrink: 0; }
+    .course-info { flex: 1; }
+    .course-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .course-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+    .badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 99px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .badge-active { background: rgba(52,211,154,0.12); color: var(--teal); border: 1px solid rgba(52,211,154,0.2); }
+    .badge-paused { background: rgba(245,166,35,0.12); color: var(--amber); border: 1px solid rgba(245,166,35,0.2); }
+    .badge-done { background: rgba(212,242,97,0.12); color: var(--accent); border: 1px solid rgba(212,242,97,0.2); }
+    .progress-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .pct { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 500; color: var(--text2); }
+    .hrs-text { font-size: 11px; color: var(--text3); }
+    .progress-track { height: 3px; background: var(--surface3); border-radius: 99px; overflow: hidden; }
+    .progress-fill { height: 100%; border-radius: 99px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+    .fill-blue { background: var(--blue); }
+    .fill-teal { background: var(--teal); }
+    .fill-amber { background: var(--amber); }
+    .fill-coral { background: var(--coral); }
+    .fill-purple { background: var(--purple); }
+    .fill-accent { background: var(--accent); }
+
+    /* ── Goals ── */
+    .goals { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 32px; }
+    .goal-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      transition: border-color 0.15s;
+    }
+    .goal-card:hover { border-color: var(--border2); }
+    .goal-icon { font-size: 20px; margin-bottom: 8px; }
+    .goal-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .goal-deadline { font-size: 11px; color: var(--text3); margin-bottom: 10px; }
+    .goal-add {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px dashed var(--border2);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text3);
+      font-family: 'Syne', sans-serif;
+      font-weight: 600;
+      background: none;
+      transition: all 0.15s;
+      gap: 6px;
+    }
+    .goal-add:hover { border-color: var(--accent); color: var(--accent); background: rgba(212,242,97,0.04); }
+
+    /* ── Weekly bars ── */
+    .week-chart { display: flex; gap: 6px; align-items: flex-end; height: 60px; margin-bottom: 6px; }
+    .day-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+    .day-bar { width: 100%; border-radius: 4px 4px 0 0; min-height: 3px; transition: opacity 0.2s; }
+    .day-bar.today { box-shadow: 0 0 10px rgba(212,242,97,0.4); }
+    .day-bar:hover { opacity: 0.8; }
+    .day-label { font-size: 9px; color: var(--text3); font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+    .week-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 32px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7);
+      backdrop-filter: blur(4px);
+      z-index: 600;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 18px;
+      padding: 28px;
+      width: 420px;
+      max-width: 95vw;
+      animation: slideUp 0.2s ease;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-title {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-label { font-size: 11px; font-weight: 700; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 6px; display: block; }
+    .form-input {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .form-input:focus { border-color: var(--accent); }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .form-select {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 13px;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+    }
+    .form-select:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn {
+      flex: 1;
+      padding: 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      border: none;
+    }
+    .btn-primary { background: var(--accent); color: #0d0d0b; }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-ghost { background: var(--surface3); color: var(--text2); }
+    .btn-ghost:hover { background: var(--surface2); color: var(--text); }
+
+    /* ── Stats view ── */
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+    }
+    .stat-card-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 10px; }
+    .stat-big { font-size: 40px; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-big span { font-size: 16px; color: var(--text3); font-weight: 400; }
+    .stat-change { font-size: 12px; color: var(--teal); margin-top: 6px; }
+    .heatmap { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+    .heat-cell {
+      aspect-ratio: 1;
+      border-radius: 3px;
+      background: var(--surface3);
+      transition: background 0.15s;
+      cursor: default;
+    }
+    .heat-cell:hover { transform: scale(1.2); }
+    .heat-1 { background: rgba(212,242,97,0.2); }
+    .heat-2 { background: rgba(212,242,97,0.45); }
+    .heat-3 { background: rgba(212,242,97,0.7); }
+    .heat-4 { background: rgba(212,242,97,0.95); }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text3);
+      font-size: 14px;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+    /* ── Toast ── */
+    .local-mode-banner {
+      display: none;
+      background: rgba(245,166,35,0.08);
+      border: 1px solid rgba(245,166,35,0.2);
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 11px;
+      color: var(--amber);
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .local-mode-banner.show { display: block; }
+
+    .toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface3);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text);
+      z-index: 200;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 99px; }
+
+    /* ── Auth Screen ── */
+    .auth-screen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .auth-screen.hidden {
+      display: none;
+    }
+    .auth-bg {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .auth-blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.12;
+    }
+    .auth-blob-1 {
+      width: 500px; height: 500px;
+      background: var(--accent);
+      top: -100px; left: -100px;
+      animation: blobDrift 8s ease-in-out infinite alternate;
+    }
+    .auth-blob-2 {
+      width: 400px; height: 400px;
+      background: var(--teal);
+      bottom: -80px; right: -80px;
+      animation: blobDrift 10s ease-in-out infinite alternate-reverse;
+    }
+    @keyframes blobDrift {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px, 20px) scale(1.08); }
+    }
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: 22px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+      z-index: 1;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.4);
+    }
+    .auth-logo {
+      font-family: 'Instrument Serif', serif;
+      font-style: italic;
+      font-size: 30px;
+      color: var(--accent);
+      margin-bottom: 6px;
+      letter-spacing: -0.5px;
+    }
+    .auth-tagline {
+      font-size: 13px;
+      color: var(--text3);
+      margin-bottom: 32px;
+    }
+    .auth-tabs {
+      display: flex;
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      margin-bottom: 24px;
+      gap: 2px;
+    }
+    .auth-tab {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      background: none;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text3);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .auth-tab.active {
+      background: var(--surface3);
+      color: var(--text);
+    }
+    .auth-form { display: flex; flex-direction: column; gap: 14px; }
+    .auth-form-group { display: flex; flex-direction: column; gap: 6px; }
+    .auth-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    .auth-input {
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 11px 14px;
+      font-size: 14px;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .auth-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(212,242,97,0.08);
+    }
+    .auth-input::placeholder { color: var(--text3); }
+    .auth-btn {
+      background: var(--accent);
+      color: #0d0d0b;
+      border: none;
+      border-radius: var(--radius-sm);
+      padding: 12px;
+      font-size: 14px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 4px;
+      letter-spacing: 0.02em;
+    }
+    .auth-btn:hover { background: var(--accent2); }
+    .auth-btn:active { transform: scale(0.98); }
+    .auth-btn.loading { opacity: 0.7; pointer-events: none; }
+    .auth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--text3);
+      font-size: 11px;
+      margin: 4px 0;
+    }
+    .auth-divider::before, .auth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .auth-hint {
+      font-size: 11px;
+      color: var(--text3);
+      text-align: center;
+      margin-top: 16px;
+      line-height: 1.5;
+    }
+    .auth-hint span {
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .auth-hint span:hover { text-decoration: underline; }
+    .auth-error {
+      background: rgba(240,107,79,0.1);
+      border: 1px solid rgba(240,107,79,0.25);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 12px;
+      color: var(--coral);
+      display: none;
+    }
+    .auth-error.show { display: block; }
+    .auth-forgot {
+      font-size: 11px;
+      color: var(--text3);
+      text-align: right;
+      cursor: pointer;
+      margin-top: -8px;
+    }
+    .auth-forgot:hover { color: var(--accent); }
+
+    /* Demo accounts hint */
+    .demo-hint {
+      background: rgba(212,242,97,0.05);
+      border: 1px solid rgba(212,242,97,0.12);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: 11px;
+      color: var(--text2);
+      line-height: 1.6;
+      margin-top: 8px;
+    }
+    .demo-hint strong { color: var(--accent); font-weight: 600; }
+
+    /* Logout button in sidebar */
+    .logout-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      padding: 7px 0;
+      font-size: 12px;
+      color: var(--text3);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: 'Syne', sans-serif;
+      transition: color 0.15s;
+      width: 100%;
+    }
+    .logout-btn:hover { color: var(--coral); }
+
+    /* ── Delete Button ── */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 3px 5px;
+      border-radius: 6px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .delete-btn:hover {
+      color: var(--coral);
+      background: rgba(240,107,79,0.1);
+    }
+
+    /* ── AI Tutor ── */
+    .ai-chat-wrap {
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 180px);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .ai-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .ai-welcome {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text2);
+    }
+    .ai-msg { display: flex; }
+    .ai-msg-user { justify-content: flex-end; }
+    .ai-msg-assistant { justify-content: flex-start; }
+    .ai-bubble {
+      max-width: 72%;
+      padding: 10px 14px;
+      border-radius: 14px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .ai-msg-user .ai-bubble {
+      background: var(--accent);
+      color: #0d0d0b;
+      border-bottom-right-radius: 4px;
+      font-weight: 500;
+    }
+    .ai-msg-assistant .ai-bubble {
+      background: var(--surface2);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .ai-typing { display: flex; gap: 5px; align-items: center; padding: 12px 16px; }
+    .ai-typing span {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--text3);
+      animation: typingPulse 1.2s infinite;
+    }
+    .ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingPulse { 0%,60%,100%{opacity:0.3;transform:scale(0.8)} 30%{opacity:1;transform:scale(1)} }
+    .ai-input-row {
+      display: flex;
+      gap: 8px;
+      padding: 14px;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .ai-input {
+      flex: 1;
+      background: var(--surface2);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-size: 13px;
+      font-family: 'Syne', sans-serif;
+      color: var(--text);
+      outline: none;
+    }
+    .ai-input:focus { border-color: var(--accent); }
+    .ai-input::placeholder { color: var(--text3); }
+    .ai-send-btn {
+      width: 38px; height: 38px;
+      background: var(--accent);
+      color: #0d0d0b;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      flex-shrink: 0;
+    }
+    .ai-send-btn:hover { background: var(--accent2); }
+  </style>
+</head>
+<body>
+
+<!-- ── Auth Screen ── -->
+<div class="auth-screen" id="authScreen">
+  <div class="auth-bg">
+    <div class="auth-blob auth-blob-1"></div>
+    <div class="auth-blob auth-blob-2"></div>
+  </div>
+  <div class="auth-card">
+    <div class="auth-logo">Learnr.</div>
+    <div class="auth-tagline">Your personal learning OS</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tabSignup" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="loginForm">
+      <div class="auth-error" id="loginError"></div>
+      <div class="auth-form">
+        <div class="auth-form-group">
+          <label class="auth-label">Email</label>
+          <input class="auth-input" id="loginEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-label">Password</label>
+          <input class="auth-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password"/>
+        </div>
+        <div class="auth-forgot" onclick="showToastGlobal('Password reset link sent! (demo)')">Forgot password?</div>
+        <button class="auth-btn" onclick="handleLogin()">Sign In →</button>
+      </div>
+      <div class="demo-hint">
+        <strong>Demo account:</strong><br/>
+        Email: <strong>demo@learnr.app</strong> &nbsp;·&nbsp; Password: <strong>demo123</strong>
+      </div>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="signupForm" style="display:none;">
+      <div class="auth-error" id="signupError"></div>
+      <div class="auth-form">
+        <div class="auth-form-group">
+          <label class="auth-label">Full Name</label>
+          <input class="auth-input" id="signupName" type="text" placeholder="Alex Johnson" autocomplete="name"/>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-label">Email</label>
+          <input class="auth-input" id="signupEmail" type="email" placeholder="you@example.com" autocomplete="email"/>
+        </div>
+        <div class="auth-form-group">
+          <label class="auth-label">Password</label>
+          <input class="auth-input" id="signupPassword" type="password" placeholder="Min. 6 characters" autocomplete="new-password"/>
+        </div>
+        <button class="auth-btn" onclick="handleSignup()">Create Account →</button>
+      </div>
+    </div>
+
+    <div class="auth-hint" id="authSwitchHint">
+      Don't have an account? <span onclick="switchTab('signup')">Sign up free</span>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-mark">Learnr.</div>
+      <div class="logo-sub">Personal Dashboard</div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" onclick="navigate('dashboard', this)">
+        <span class="nav-icon">⬡</span> Dashboard <span class="nav-dot" style="margin-left:auto"></span>
+      </button>
+      <button class="nav-item" onclick="navigate('courses', this)">
+        <span class="nav-icon">◻</span> Courses
+      </button>
+      <button class="nav-item" onclick="navigate('goals', this)">
+        <span class="nav-icon">◎</span> Goals
+      </button>
+      <button class="nav-item" onclick="navigate('stats', this)">
+        <span class="nav-icon">◈</span> Stats
+      </button>
+      <button class="nav-item" onclick="navigate('ai', this)">
+        <span class="nav-icon">◎</span> AI Tutor
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="avatar-row">
+        <div class="avatar" id="avatarInitial">A</div>
+        <div>
+          <div class="avatar-name" id="sidebarName">Alex</div>
+          <div class="avatar-role">Learner</div>
+        </div>
+      </div>
+      <button class="logout-btn" onclick="handleLogout()">
+        <span style="font-size:14px">⎋</span> Sign out
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+
+    <!-- ── Dashboard View ── -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div class="page-title" id="dashGreeting">Good morning,</div>
+        <div class="page-sub" id="dashDate"></div>
+      </div>
+
+      <div class="local-mode-banner" id="localBanner">
+        ⚠️ Running in offline mode — data saved locally. <a href="https://railway.app" target="_blank" style="color:var(--accent);text-decoration:none;font-weight:600;">Deploy backend on Railway</a> to sync across devices.
+      </div>
+      <div class="streak-banner">
+        <span class="streak-icon">🔥</span>
+        <div>
+          <div class="streak-num" id="streakNum">0-day streak</div>
+          <div class="streak-label">Keep going — you're on a roll</div>
+        </div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <div class="metric-label">Hours / Week</div>
+          <div class="metric-value" id="metHrs">0</div>
+          <div class="metric-sub">Goal: 8 hrs</div>
+          <div class="metric-bar"><div class="metric-bar-fill" id="metHrsBar" style="width:0%"></div></div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Active Courses</div>
+          <div class="metric-value" id="metActive">—</div>
+          <div class="metric-sub" id="metPaused">— paused</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Completed</div>
+          <div class="metric-value" id="metDone">0</div>
+          <div class="metric-sub">all time</div>
+        </div>
+      </div>
+
+      <!-- Weekly chart -->
+      <div class="week-wrap">
+        <div class="section-header" style="margin-bottom:14px;">
+          <span class="section-title">This Week</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text2);" id="weekTotal">6.5 hrs</span>
+        </div>
+        <div class="week-chart" id="weekChart"></div>
+        <div style="display:flex; gap:6px;" id="weekLabels"></div>
+      </div>
+
+      <!-- Recent courses -->
+      <div class="section-header">
+        <span class="section-title">Active Courses</span>
+        <button class="section-action" onclick="navigate('courses', document.querySelector('[onclick*=courses]'))">View all →</button>
+      </div>
+      <div class="courses" id="dashCourses"></div>
+    </div>
+
+    <!-- ── Courses View ── -->
+    <div class="view" id="view-courses">
+      <div class="page-header">
+        <div class="page-title">My Courses</div>
+        <div class="page-sub">Track all your learning paths</div>
+      </div>
+      <div class="section-header">
+        <span class="section-title">All Courses</span>
+        <button class="section-action" onclick="openModal('course')">+ Add Course</button>
+      </div>
+      <div class="courses" id="allCourses"></div>
+      <div style="margin-top:10px;">
+        <button class="goal-add" onclick="openModal('course')" style="width:100%; padding: 14px;">
+          <span>+</span> Add a new course
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Goals View ── -->
+    <div class="view" id="view-goals">
+      <div class="page-header">
+        <div class="page-title">Learning Goals</div>
+        <div class="page-sub">Set targets, stay accountable</div>
+      </div>
+      <div class="section-header">
+        <span class="section-title">Your Goals</span>
+        <button class="section-action" onclick="openModal('goal')">+ Add Goal</button>
+      </div>
+      <div class="goals" id="allGoals"></div>
+    </div>
+
+    <!-- ── Stats View ── -->
+    <div class="view" id="view-stats">
+      <div class="page-header">
+        <div class="page-title">Your Stats</div>
+        <div class="page-sub">A deep dive into your progress</div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-title">Total hours logged</div>
+          <div class="stat-big" id="statTotalHrs">—<span> hrs</span></div>
+          <div class="stat-change"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">Courses completed</div>
+          <div class="stat-big" id="statCompleted">0</div>
+          <div class="stat-change"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">Longest streak</div>
+          <div class="stat-big" id="statStreak">0<span> days</span></div>
+          <div class="stat-change" id="statStreakChange">Start your streak today! 🔥</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title">Goals achieved</div>
+          <div class="stat-big" id="statGoals">0<span> / 0</span></div>
+          <div class="stat-change" id="statGoalsRate">No goals yet</div>
+        </div>
+      </div>
+      <div class="section-header" style="margin-bottom: 14px;">
+        <span class="section-title">Activity Heatmap — Last 28 days</span>
+      </div>
+      <div class="week-wrap" style="margin-bottom: 0;">
+        <div class="heatmap" id="heatmap"></div>
+      </div>
+    </div>
+
+    <!-- ── AI Tutor View ── -->
+    <div class="view" id="view-ai">
+      <div class="page-header">
+        <div class="page-title">AI Tutor</div>
+        <div class="page-sub">Powered by OpenRouter · Llama 3.1 (free)</div>
+      </div>
+      <div class="ai-chat-wrap">
+        <div class="ai-messages" id="aiMessages">
+          <div class="ai-welcome">
+            <div style="font-size:32px;margin-bottom:10px">🤖</div>
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Learnr AI Tutor</div>
+            <div style="font-size:12px;color:var(--text2)">Ask me anything about your learning journey — I can see your courses and goals!</div>
+          </div>
+        </div>
+        <div class="ai-input-row">
+          <input class="ai-input" id="aiInput" placeholder="Ask your AI tutor anything…" onkeydown="if(event.key==='Enter')sendAIMessage()"/>
+          <button class="ai-send-btn" onclick="sendAIMessage()">↑</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+
+
+<!-- Course Modal -->
+<div class="modal-overlay" id="courseModal">
+  <div class="modal">
+    <div class="modal-title">Add a Course</div>
+    <div class="form-group">
+      <label class="form-label">Course Name</label>
+      <input class="form-input" id="cName" placeholder="e.g. Machine Learning Fundamentals"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Platform</label>
+        <input class="form-input" id="cPlatform" placeholder="e.g. Coursera"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Total Hours</label>
+        <input class="form-input" id="cHours" type="number" placeholder="e.g. 20" min="1"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Progress %</label>
+        <input class="form-input" id="cProgress" type="number" placeholder="0–100" min="0" max="100"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Status</label>
+        <select class="form-select" id="cStatus">
+          <option value="active">Active</option>
+          <option value="paused">Paused</option>
+          <option value="done">Completed</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Emoji Icon</label>
+      <input class="form-input" id="cEmoji" placeholder="e.g. 🤖" maxlength="2"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('course')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCourse()">Add Course</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goal Modal -->
+<div class="modal-overlay" id="goalModal">
+  <div class="modal">
+    <div class="modal-title">Add a Goal</div>
+    <div class="form-group">
+      <label class="form-label">Goal Title</label>
+      <input class="form-input" id="gName" placeholder="e.g. Read 12 books"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Current</label>
+        <input class="form-input" id="gCurrent" type="number" placeholder="0" min="0"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Target</label>
+        <input class="form-input" id="gTarget" type="number" placeholder="10" min="1"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Deadline</label>
+        <input class="form-input" id="gDeadline" type="date"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Emoji Icon</label>
+        <input class="form-input" id="gEmoji" placeholder="e.g. 📚" maxlength="2"/>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('goal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveGoal()">Add Goal</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+<script>
+  // ── API Config ──
+  const RAILWAY_URL = 'https://codedwebb.up.railway.app';
+  const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:3001/api'
+    : RAILWAY_URL + '/api';
+
+  let authToken = localStorage.getItem('learnr_token') || null;
+  let useLocalMode = false;
+
+  async function apiFetch(path, options = {}) {
+    const res = await fetch(API_BASE + path, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken ? { 'Authorization': 'Bearer ' + authToken } : {}),
+        ...(options.headers || {})
+      },
+      body: options.body ? JSON.stringify(options.body) : undefined
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Request failed');
+    }
+    return res.json();
+  }
+
+  // ── Local Storage Fallback (when backend not deployed yet) ──
+  const LS_USERS = 'learnr_users';
+  const LS_SESSION = 'learnr_session';
+
+  function lsGetUsers() {
+    const u = localStorage.getItem(LS_USERS);
+    const users = u ? JSON.parse(u) : [];
+    if (!users.find(x => x.email === 'demo@learnr.app'))
+      users.push({ id:1, name:'Alex Demo', email:'demo@learnr.app', password:'demo123', streak:12 });
+    return users;
+  }
+  function lsSaveUsers(u) { localStorage.setItem(LS_USERS, JSON.stringify(u)); }
+  function lsSetSession(user) { localStorage.setItem(LS_SESSION, JSON.stringify(user)); }
+  function lsGetSession() { const s = localStorage.getItem(LS_SESSION); return s ? JSON.parse(s) : null; }
+  function lsClearSession() { localStorage.removeItem(LS_SESSION); localStorage.removeItem('learnr_token'); }
+
+  function lsLogin(email, password) {
+    const users = lsGetUsers();
+    const user = users.find(u => u.email === email.toLowerCase().trim() && u.password === password);
+    if (!user) throw new Error('Incorrect email or password');
+    lsSetSession(user);
+    return user;
+  }
+
+  function lsRegister(name, email, password) {
+    const users = lsGetUsers();
+    if (users.find(u => u.email === email.toLowerCase().trim())) throw new Error('Email already registered');
+    const user = { id: Date.now(), name, email: email.toLowerCase().trim(), password, streak: 0 };
+    users.push(user);
+    lsSaveUsers(users);
+    lsSetSession(user);
+    return user;
+  }
+
+  // ── App State (starts empty for every new user) ──
+  let courses = [];
+  let goals = [];
+  let weekData = [0, 0, 0, 0, 0, 0, 0];
+  let aiHistory = [];
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const colors = ['fill-blue','fill-teal','fill-coral','fill-amber','fill-purple','fill-accent'];
+
+
+// ── Auth ──
+  function switchTab(tab) {
+    const isLogin = tab === 'login';
+    document.getElementById('loginForm').style.display = isLogin ? '' : 'none';
+    document.getElementById('signupForm').style.display = isLogin ? 'none' : '';
+    document.getElementById('tabLogin').classList.toggle('active', isLogin);
+    document.getElementById('tabSignup').classList.toggle('active', !isLogin);
+    document.getElementById('authSwitchHint').innerHTML = isLogin
+      ? `Don't have an account? <span onclick="switchTab('signup')">Sign up free</span>`
+      : `Already have an account? <span onclick="switchTab('login')">Sign in</span>`;
+    document.getElementById('loginError').classList.remove('show');
+    document.getElementById('signupError').classList.remove('show');
+  }
+
+  async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { showAuthError('loginError', 'Please fill in all fields.'); return; }
+    const btn = document.querySelector('#loginForm .auth-btn');
+    btn.textContent = 'Signing in…'; btn.classList.add('loading');
+    try {
+      const data = await apiFetch('/auth/login', { method: 'POST', body: { email, password } });
+      authToken = data.token;
+      localStorage.setItem('learnr_token', authToken);
+      useLocalMode = false;
+      await enterApp(data.user);
+    } catch(e) {
+      // Backend unreachable — fall back to local mode
+      if (e.message === 'Failed to fetch' || e.message.includes('fetch')) {
+        try {
+          const user = lsLogin(email, password);
+          useLocalMode = true;
+          await enterApp(user);
+        } catch(le) { showAuthError('loginError', le.message); }
+      } else {
+        showAuthError('loginError', e.message);
+      }
+    } finally {
+      btn.textContent = 'Sign In →'; btn.classList.remove('loading');
+    }
+  }
+
+  async function handleSignup() {
+    const name = document.getElementById('signupName').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    if (!name || !email || !password) { showAuthError('signupError', 'Please fill in all fields.'); return; }
+    if (password.length < 6) { showAuthError('signupError', 'Password must be at least 6 characters.'); return; }
+    const btn = document.querySelector('#signupForm .auth-btn');
+    btn.textContent = 'Creating account…'; btn.classList.add('loading');
+    try {
+      const data = await apiFetch('/auth/register', { method: 'POST', body: { name, email, password } });
+      authToken = data.token;
+      localStorage.setItem('learnr_token', authToken);
+      useLocalMode = false;
+      await enterApp(data.user);
+    } catch(e) {
+      // Backend unreachable — fall back to local mode
+      if (e.message === 'Failed to fetch' || e.message.includes('fetch')) {
+        try {
+          const user = lsRegister(name, email, password);
+          useLocalMode = true;
+          await enterApp(user);
+        } catch(le) { showAuthError('signupError', le.message); }
+      } else {
+        showAuthError('signupError', e.message);
+      }
+    } finally {
+      btn.textContent = 'Create Account →'; btn.classList.remove('loading');
+    }
+  }
+
+  function handleLogout() {
+    authToken = null;
+    useLocalMode = false;
+    lsClearSession();
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('loginEmail').value = '';
+    document.getElementById('loginPassword').value = '';
+    switchTab('login');
+    showToast('Signed out');
+  }
+
+  async function enterApp(user) {
+    const first = user.name.split(' ')[0];
+    document.getElementById('sidebarName').textContent = first;
+    document.getElementById('avatarInitial').textContent = first[0].toUpperCase();
+    document.getElementById('authScreen').classList.add('hidden');
+    await loadDataFromAPI();
+    init();
+    // Show offline banner if backend not connected
+    const banner = document.getElementById('localBanner');
+    if (banner) banner.classList.toggle('show', useLocalMode);
+  }
+
+  async function loadDataFromAPI() {
+    if (useLocalMode) {
+      // Restore from localStorage
+      const lsCourses = localStorage.getItem('learnr_courses');
+      const lsGoals = localStorage.getItem('learnr_goals');
+      if (lsCourses) courses = JSON.parse(lsCourses);
+      if (lsGoals) goals = JSON.parse(lsGoals);
+      return;
+    }
+    try {
+      const [apiCourses, apiGoals, activity] = await Promise.all([
+        apiFetch('/courses'),
+        apiFetch('/goals'),
+        apiFetch('/activity/week')
+      ]);
+      courses = apiCourses.map(c => ({ id:c.id, name:c.name, platform:c.platform, totalHrs:c.total_hrs, progress:c.progress, status:c.status, emoji:c.emoji, color:c.color }));
+      goals = apiGoals.map(g => ({ id:g.id, name:g.name, current:g.current, target:g.target, deadline:g.deadline, emoji:g.emoji, color:g.color }));
+      const newWeek = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate()-i);
+        const dateStr = d.toISOString().split('T')[0];
+        const row = activity.find(r => r.logged_date === dateStr);
+        newWeek.push(row ? parseFloat(row.hours) : 0);
+      }
+      weekData = newWeek;
+    } catch(e) {
+      console.warn('API load failed, restoring from localStorage:', e.message);
+      useLocalMode = true;
+      const lsCourses = localStorage.getItem('learnr_courses');
+      const lsGoals = localStorage.getItem('learnr_goals');
+      if (lsCourses) courses = JSON.parse(lsCourses);
+      if (lsGoals) goals = JSON.parse(lsGoals);
+    }
+  }
+
+  function showAuthError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('show');
+  }
+
+  // ── Init ──
+  function init() {
+    setGreeting();
+    renderWeekChart();
+    renderDashCourses();
+    updateMetrics();
+    renderAllCourses();
+    renderGoals();
+    renderStats();
+    renderHeatmap();
+    // Reset streak for new users with no data
+    if (courses.length === 0 && goals.length === 0) {
+      const streakEl = document.getElementById('streakNum');
+      if (streakEl) streakEl.textContent = '0-day streak';
+    }
+  }
+
+  function setGreeting() {
+    const now = new Date();
+    const h = now.getHours();
+    const greet = h < 12 ? 'Good morning,' : h < 17 ? 'Good afternoon,' : 'Good evening,';
+    document.getElementById('dashGreeting').textContent = greet;
+    document.getElementById('dashDate').textContent = now.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  function updateMetrics() {
+    const active = courses.filter(c => c.status === 'active').length;
+    const paused = courses.filter(c => c.status === 'paused').length;
+    const done = courses.filter(c => c.status === 'done').length;
+    document.getElementById('metActive').textContent = active;
+    document.getElementById('metPaused').textContent = paused + ' paused';
+    document.getElementById('metDone').textContent = done;
+  }
+
+  // ── Week Chart ──
+  function renderWeekChart() {
+    const max = Math.max(...weekData, 1);
+    const chartEl = document.getElementById('weekChart');
+    const labelsEl = document.getElementById('weekLabels');
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    chartEl.innerHTML = '';
+    labelsEl.innerHTML = '';
+    weekData.forEach((h, i) => {
+      const pct = (h / max) * 100;
+      const col = document.createElement('div'); col.className = 'day-col';
+      const bar = document.createElement('div');
+      bar.className = 'day-bar' + (i === todayIdx ? ' today' : '');
+      bar.style.height = Math.max(pct * 0.54, 3) + 'px';
+      bar.style.background = i === todayIdx ? 'var(--accent)' : 'var(--blue)';
+      bar.style.opacity = h === 0 ? '0.2' : '1';
+      bar.title = days[i] + ': ' + h + ' hrs';
+      col.appendChild(bar); chartEl.appendChild(col);
+      const lbl = document.createElement('div'); lbl.className = 'day-col';
+      lbl.innerHTML = '<span class="day-label" style="' + (i===todayIdx?'color:var(--accent)':'') + '">' + days[i] + '</span>';
+      labelsEl.appendChild(lbl);
+    });
+    document.getElementById('weekTotal').textContent = weekData.reduce((a,b)=>a+b,0).toFixed(1) + ' hrs';
+  }
+
+  // ── Course rendering ──
+  function courseCard(c, dim) {
+    const completedHrs = Math.round(c.totalHrs * c.progress / 100);
+    const leftHrs = (c.totalHrs - completedHrs).toFixed(1);
+    const badgeClass = c.status === 'active' ? 'badge-active' : c.status === 'paused' ? 'badge-paused' : 'badge-done';
+    const badgeLabel = c.status === 'active' ? 'Active' : c.status === 'paused' ? 'Paused' : 'Done';
+    return `<div class="course-card" style="${dim ? 'opacity:0.6' : ''}">
+      <div class="course-top">
+        <div style="display:flex;align-items:flex-start;flex:1;gap:0;">
+          <span class="course-emoji">${c.emoji||'📘'}</span>
+          <div class="course-info">
+            <div class="course-name">${c.name}</div>
+            <div class="course-meta">${c.platform} · ${leftHrs} hrs left</div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+          <button class="delete-btn" onclick="deleteCourse(${c.id})" title="Delete course">🗑</button>
+        </div>
+      </div>
+      <div class="progress-row"><span class="pct">${c.progress}%</span><span class="hrs-text">${completedHrs} / ${c.totalHrs} hrs</span></div>
+      <div class="progress-track"><div class="progress-fill ${c.color}" style="width:${c.progress}%"></div></div>
+    </div>`;
+  }
+
+  function renderDashCourses() {
+    const el = document.getElementById('dashCourses');
+    const active = courses.filter(c => c.status !== 'done').slice(0,3);
+    el.innerHTML = active.length ? active.map(c => courseCard(c, c.status==='paused')).join('') : '<div class="empty"><div class="empty-icon">📭</div>No active courses. Add one!</div>';
+  }
+
+  function renderAllCourses() {
+    const el = document.getElementById('allCourses');
+    el.innerHTML = courses.length ? courses.map(c => courseCard(c,false)).join('') : '<div class="empty"><div class="empty-icon">📭</div>No courses yet. Add your first!</div>';
+  }
+
+  // ── Goals ──
+  function renderGoals() {
+    const el = document.getElementById('allGoals');
+    const cards = goals.map(g => {
+      const pct = Math.min(Math.round(g.current/g.target*100),100);
+      const dl = g.deadline ? new Date(g.deadline).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
+      return `<div class="goal-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div class="goal-icon">${g.emoji||'🎯'}</div>
+          <button class="delete-btn" onclick="deleteGoal(${g.id})" title="Delete goal">🗑</button>
+        </div>
+        <div class="goal-name">${g.name}</div>
+        <div class="goal-deadline">${dl?'By '+dl:''} · ${g.current} / ${g.target}</div>
+        <div class="progress-row"><span class="pct">${pct}%</span></div>
+        <div class="progress-track"><div class="progress-fill ${g.color}" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+    el.innerHTML = cards + `<button class="goal-add" onclick="openModal('goal')"><span style="font-size:18px">+</span> New goal</button>`;
+  }
+
+  // ── Stats ──
+  function renderStats() {
+    const totalHrs = courses.reduce((s,c)=>s+Math.round(c.totalHrs*c.progress/100),0);
+    const completedCount = courses.filter(c=>c.status==='done').length;
+    const goalsAchieved = goals.filter(g=>g.current>=g.target).length;
+    const weekHrs = weekData.reduce((a,b)=>a+b,0).toFixed(1);
+    const weekPct = Math.min(Math.round((weekHrs/8)*100),100);
+
+    // Dashboard metrics
+    document.getElementById('metHrs').textContent = weekHrs;
+    document.getElementById('metHrsBar').style.width = weekPct + '%';
+    document.getElementById('metDone').textContent = completedCount;
+
+    // Stats page
+    document.getElementById('statTotalHrs').innerHTML = totalHrs + '<span> hrs</span>';
+    document.getElementById('statCompleted').textContent = completedCount;
+
+    const statStreak = document.getElementById('statStreak');
+    if (statStreak) statStreak.innerHTML = '0<span> days</span>';
+
+    const statGoals = document.getElementById('statGoals');
+    if (statGoals) statGoals.innerHTML = goalsAchieved + '<span> / ' + goals.length + '</span>';
+
+    const statRate = document.getElementById('statGoalsRate');
+    if (statRate) statRate.textContent = goals.length > 0
+      ? Math.round(goalsAchieved / goals.length * 100) + '% completion rate'
+      : 'No goals yet';
+
+    // Streak banner
+    const streakEl = document.getElementById('streakNum');
+    if (streakEl) streakEl.textContent = '0-day streak';
+  }
+
+  // ── Heatmap ──
+  function renderHeatmap() {
+    const el = document.getElementById('heatmap');
+    const levels = [0,1,2,3,4,2,1, 3,4,2,1,0,2,3, 1,2,4,3,2,1,0, 2,3,1,4,2,3,1];
+    el.innerHTML = levels.map(l => `<div class="heat-cell heat-${l}" title="${l} hrs"></div>`).join('');
+  }
+
+  // ── Navigation ──
+  function navigate(view, btn) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(n => { n.classList.remove('active'); n.querySelector('.nav-dot')?.remove(); });
+    document.getElementById('view-'+view).classList.add('active');
+    if (btn) {
+      btn.classList.add('active');
+      const dot = document.createElement('span'); dot.className='nav-dot'; dot.style.marginLeft='auto';
+      btn.appendChild(dot);
+    }
+    if (view==='courses') renderAllCourses();
+    if (view==='goals') renderGoals();
+    if (view==='ai') loadAIHistory();
+  }
+
+  // ── Modals ──
+  function openModal(type) { document.getElementById(type+'Modal').classList.add('open'); }
+  function closeModal(type) { document.getElementById(type+'Modal').classList.remove('open'); }
+
+  // ── Save Course ──
+  async function saveCourse() {
+    const name = document.getElementById('cName').value.trim();
+    if (!name) { showToast('Please enter a course name'); return; }
+    const colorIdx = courses.length % colors.length;
+    const newCourse = {
+      id: Date.now(),
+      name,
+      platform: document.getElementById('cPlatform').value.trim() || 'Unknown',
+      totalHrs: parseInt(document.getElementById('cHours').value) || 10,
+      progress: Math.min(parseInt(document.getElementById('cProgress').value) || 0, 100),
+      status: document.getElementById('cStatus').value || 'active',
+      emoji: document.getElementById('cEmoji').value.trim() || '📘',
+      color: colors[colorIdx]
+    };
+    // Try API, fall back to local
+    if (!useLocalMode) {
+      try {
+        const saved = await apiFetch('/courses', { method: 'POST', body: {
+          name: newCourse.name, platform: newCourse.platform,
+          total_hrs: newCourse.totalHrs, progress: newCourse.progress,
+          status: newCourse.status, emoji: newCourse.emoji, color: newCourse.color
+        }});
+        newCourse.id = saved.id;
+      } catch(e) { console.warn('API save failed, saving locally:', e.message); }
+    }
+    courses.push(newCourse);
+    // Persist locally too
+    localStorage.setItem('learnr_courses', JSON.stringify(courses));
+    closeModal('course');
+    ['cName','cPlatform','cHours','cProgress','cEmoji'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('cStatus').value = 'active';
+    renderDashCourses(); renderAllCourses(); updateMetrics();
+    showToast('Course added ✓');
+  }
+
+  // ── Save Goal ──
+  async function saveGoal() {
+    const name = document.getElementById('gName').value.trim();
+    if (!name) { showToast('Please enter a goal title'); return; }
+    const colorIdx = goals.length % colors.length;
+    const newGoal = {
+      id: Date.now(),
+      name,
+      current: parseFloat(document.getElementById('gCurrent').value) || 0,
+      target: parseFloat(document.getElementById('gTarget').value) || 10,
+      deadline: document.getElementById('gDeadline').value || null,
+      emoji: document.getElementById('gEmoji').value.trim() || '🎯',
+      color: colors[colorIdx]
+    };
+    // Try API, fall back to local
+    if (!useLocalMode) {
+      try {
+        const saved = await apiFetch('/goals', { method: 'POST', body: {
+          name: newGoal.name, current: newGoal.current, target: newGoal.target,
+          deadline: newGoal.deadline, emoji: newGoal.emoji, color: newGoal.color
+        }});
+        newGoal.id = saved.id;
+      } catch(e) { console.warn('API save failed, saving locally:', e.message); }
+    }
+    goals.push(newGoal);
+    localStorage.setItem('learnr_goals', JSON.stringify(goals));
+    closeModal('goal');
+    ['gName','gCurrent','gTarget','gDeadline','gEmoji'].forEach(id => document.getElementById(id).value = '');
+    renderGoals();
+    showToast('Goal added ✓');
+  }
+
+  // ── AI Tutor ──
+  async function loadAIHistory() {
+    try {
+      const history = await apiFetch('/ai/history');
+      aiHistory = history;
+      renderAIChat();
+    } catch(e) { console.warn('Could not load AI history'); }
+  }
+
+  function renderAIChat() {
+    const el = document.getElementById('aiMessages');
+    if (!el) return;
+    if (aiHistory.length === 0) {
+      el.innerHTML = '<div class="ai-welcome"><div style="font-size:32px;margin-bottom:10px">🤖</div><div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px">Learnr AI Tutor</div><div style="font-size:12px;color:var(--text2)">Ask me anything about your learning journey — I can see your courses and goals!</div></div>';
+      return;
+    }
+    el.innerHTML = aiHistory.map(m => `<div class="ai-msg ai-msg-${m.role}"><div class="ai-bubble">${m.content}</div></div>`).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+
+  async function sendAIMessage() {
+    const input = document.getElementById('aiInput');
+    const message = input.value.trim();
+    if (!message) return;
+    input.value = '';
+    aiHistory.push({ role:'user', content:message });
+    renderAIChat();
+    const el = document.getElementById('aiMessages');
+    el.innerHTML += '<div class="ai-msg ai-msg-assistant"><div class="ai-bubble ai-typing"><span></span><span></span><span></span></div></div>';
+    el.scrollTop = el.scrollHeight;
+    try {
+      const data = await apiFetch('/ai/chat', { method:'POST', body:{ message, history: aiHistory.slice(-8) } });
+      aiHistory.push({ role:'assistant', content:data.reply });
+    } catch(e) {
+      let errMsg = e.message;
+      if (e.message.includes('Failed to fetch') || e.message.includes('fetch')) {
+        errMsg = '⚠️ Cannot reach backend. Check that your Railway/Render backend is deployed and the URL in index.html is correct.';
+      } else if (e.message.includes('not configured') || e.message.includes('503')) {
+        errMsg = '⚠️ AI not configured. Add OPENROUTER_API_KEY to your backend environment variables on Railway/Render.';
+      } else if (e.message.includes('401')) {
+        errMsg = '⚠️ Session expired. Please sign out and sign back in.';
+      }
+      aiHistory.push({ role:'assistant', content: errMsg });
+    }
+    renderAIChat();
+  }
+
+  // ── Delete Course ──
+  async function deleteCourse(id) {
+    const card = event.target.closest('.course-card');
+    if (!card) return;
+    // Show inline confirm state
+    card.style.opacity = '0.5';
+    card.style.transition = 'opacity 0.2s';
+    const confirmed = window.confirm('Delete this course? This cannot be undone.');
+    if (!confirmed) { card.style.opacity = ''; return; }
+    courses = courses.filter(c => c.id !== id);
+    localStorage.setItem('learnr_courses', JSON.stringify(courses));
+    renderDashCourses(); renderAllCourses(); updateMetrics(); renderStats();
+    if (!useLocalMode) {
+      try { await apiFetch('/courses/' + id, { method: 'DELETE' }); }
+      catch(e) { console.warn('API delete failed:', e.message); }
+    }
+    showToast('Course deleted ✓');
+  }
+
+  // ── Delete Goal ──
+  async function deleteGoal(id) {
+    const card = event.target.closest('.goal-card');
+    if (!card) return;
+    card.style.opacity = '0.5';
+    card.style.transition = 'opacity 0.2s';
+    const confirmed = window.confirm('Delete this goal? This cannot be undone.');
+    if (!confirmed) { card.style.opacity = ''; return; }
+    goals = goals.filter(g => g.id !== id);
+    localStorage.setItem('learnr_goals', JSON.stringify(goals));
+    renderGoals(); renderStats();
+    if (!useLocalMode) {
+      try { await apiFetch('/goals/' + id, { method: 'DELETE' }); }
+      catch(e) { console.warn('API delete failed:', e.message); }
+    }
+    showToast('Goal deleted ✓');
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+
+  document.querySelectorAll('.modal-overlay').forEach(el => {
+    el.addEventListener('click', e => { if (e.target===el) el.classList.remove('open'); });
+  });
+
+  document.getElementById('loginPassword').addEventListener('keydown', e => { if (e.key==='Enter') handleLogin(); });
+  document.getElementById('signupPassword').addEventListener('keydown', e => { if (e.key==='Enter') handleSignup(); });
+
+  // ── Check token on load ──
+  if (authToken) {
+    apiFetch('/auth/me')
+      .then(user => { useLocalMode = false; enterApp(user); })
+      .catch(() => {
+        // Token exists but backend unreachable — try local session
+        const localSession = lsGetSession();
+        if (localSession) { useLocalMode = true; enterApp(localSession); }
+        else { localStorage.removeItem('learnr_token'); authToken = null; }
+      });
+  } else {
+    // No token — check for local session
+    const localSession = lsGetSession();
+    if (localSession) { useLocalMode = true; enterApp(localSession); }
+  }
+</script>
+</body>
+</html>
