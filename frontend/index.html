@@ -649,6 +649,29 @@
     }
     .logout-btn:hover { color: var(--coral); }
 
+    /* ── Delete Button ── */
+    .card-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text3);
+      cursor: pointer;
+      font-size: 15px;
+      padding: 3px 5px;
+      border-radius: 6px;
+      line-height: 1;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .delete-btn:hover {
+      color: var(--coral);
+      background: rgba(240,107,79,0.1);
+    }
+
     /* ── AI Tutor ── */
     .ai-chat-wrap {
       display: flex;
@@ -1352,7 +1375,10 @@
             <div class="course-meta">${c.platform} · ${leftHrs} hrs left</div>
           </div>
         </div>
-        <span class="badge ${badgeClass}">${badgeLabel}</span>
+        <div class="card-actions">
+          <span class="badge ${badgeClass}">${badgeLabel}</span>
+          <button class="delete-btn" onclick="deleteCourse(${c.id})" title="Delete course">🗑</button>
+        </div>
       </div>
       <div class="progress-row"><span class="pct">${c.progress}%</span><span class="hrs-text">${completedHrs} / ${c.totalHrs} hrs</span></div>
       <div class="progress-track"><div class="progress-fill ${c.color}" style="width:${c.progress}%"></div></div>
@@ -1377,7 +1403,10 @@
       const pct = Math.min(Math.round(g.current/g.target*100),100);
       const dl = g.deadline ? new Date(g.deadline).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '';
       return `<div class="goal-card">
-        <div class="goal-icon">${g.emoji||'🎯'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div class="goal-icon">${g.emoji||'🎯'}</div>
+          <button class="delete-btn" onclick="deleteGoal(${g.id})" title="Delete goal">🗑</button>
+        </div>
         <div class="goal-name">${g.name}</div>
         <div class="goal-deadline">${dl?'By '+dl:''} · ${g.current} / ${g.target}</div>
         <div class="progress-row"><span class="pct">${pct}%</span></div>
@@ -1548,9 +1577,54 @@
       const data = await apiFetch('/ai/chat', { method:'POST', body:{ message, history: aiHistory.slice(-8) } });
       aiHistory.push({ role:'assistant', content:data.reply });
     } catch(e) {
-      aiHistory.push({ role:'assistant', content:'⚠️ ' + e.message });
+      let errMsg = e.message;
+      if (e.message.includes('Failed to fetch') || e.message.includes('fetch')) {
+        errMsg = '⚠️ Cannot reach backend. Check that your Railway/Render backend is deployed and the URL in index.html is correct.';
+      } else if (e.message.includes('not configured') || e.message.includes('503')) {
+        errMsg = '⚠️ AI not configured. Add OPENROUTER_API_KEY to your backend environment variables on Railway/Render.';
+      } else if (e.message.includes('401')) {
+        errMsg = '⚠️ Session expired. Please sign out and sign back in.';
+      }
+      aiHistory.push({ role:'assistant', content: errMsg });
     }
     renderAIChat();
+  }
+
+  // ── Delete Course ──
+  async function deleteCourse(id) {
+    const card = event.target.closest('.course-card');
+    if (!card) return;
+    // Show inline confirm state
+    card.style.opacity = '0.5';
+    card.style.transition = 'opacity 0.2s';
+    const confirmed = window.confirm('Delete this course? This cannot be undone.');
+    if (!confirmed) { card.style.opacity = ''; return; }
+    courses = courses.filter(c => c.id !== id);
+    localStorage.setItem('learnr_courses', JSON.stringify(courses));
+    renderDashCourses(); renderAllCourses(); updateMetrics(); renderStats();
+    if (!useLocalMode) {
+      try { await apiFetch('/courses/' + id, { method: 'DELETE' }); }
+      catch(e) { console.warn('API delete failed:', e.message); }
+    }
+    showToast('Course deleted ✓');
+  }
+
+  // ── Delete Goal ──
+  async function deleteGoal(id) {
+    const card = event.target.closest('.goal-card');
+    if (!card) return;
+    card.style.opacity = '0.5';
+    card.style.transition = 'opacity 0.2s';
+    const confirmed = window.confirm('Delete this goal? This cannot be undone.');
+    if (!confirmed) { card.style.opacity = ''; return; }
+    goals = goals.filter(g => g.id !== id);
+    localStorage.setItem('learnr_goals', JSON.stringify(goals));
+    renderGoals(); renderStats();
+    if (!useLocalMode) {
+      try { await apiFetch('/goals/' + id, { method: 'DELETE' }); }
+      catch(e) { console.warn('API delete failed:', e.message); }
+    }
+    showToast('Goal deleted ✓');
   }
 
   // ── Toast ──
