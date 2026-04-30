@@ -39,7 +39,7 @@ learnr/
 ├── backend/
 │   ├── server.js        ← Express REST API + OpenRouter AI
 │   ├── package.json
-│   ├── render.yaml      ← Render deploy config
+│   ├── railway.toml      ← Render deploy config
 │   └── .env.example
 ├── .gitignore
 └── README.md
