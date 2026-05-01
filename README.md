@@ -10,7 +10,7 @@ A full-stack web app to track courses, goals, streaks, and weekly study activity
 
 | | URL |
 |--|--|
-| **Frontend (Vercel)** | [codedwebsite.vercel.app]
+| **Frontend (Vercel)** | [codedwebsite.vercel.app](codedwebsite.vercel.app)
 | **Backend (Railway)** | [https://codedwebb.up.railway.app](https://codedwebb.up.railway.app)
 
 Some problems with the deployment of the backend
